@@ -145,7 +145,7 @@ class PlanListView(StripeView):
         return Response(settings.PAYMENTS_PLANS, status=status.HTTP_200_OK)
 
 
-class ChargeListView(StripeView, generics.ListAPIView):
+class ChargeView(StripeView, generics.ListCreateAPIView):
     """ List customer charges """
     serializer_class = ChargeSerializer
 
@@ -153,6 +153,25 @@ class ChargeListView(StripeView, generics.ListAPIView):
         customer = self.get_customer()
         charges = customer.charges.all()
         return charges
+
+    def create(self, request, *args, **kwargs):
+        # Use the `ChargeSerializer` to parse the request, but
+        # the `customer.charge` method to actually make the charge.
+        # This ensures the charge is created in Stripe.
+        customer = self.get_customer()
+        self.request.data.update({'customer': customer.pk})
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        charge_data = dict(
+            amount=serializer.validated_data.get('amount'),
+            currency=serializer.validated_data.get('currency', 'usd'),
+            description=serializer.validated_data.get('description'),
+            send_receipt=False
+        )
+        charge = customer.charge(**charge_data)
+        new_charge = self.get_serializer(instance=charge)
+        return Response(new_charge.data, status=status.HTTP_201_CREATED)
 
 
 class InvoiceListView(StripeView, generics.ListAPIView):

@@ -43,6 +43,7 @@ class CurrentSubscriptionSerializer(ModelSerializer):
 class ChargeSerializer(ModelSerializer):
     class Meta:
         model = Charge
+        read_only_fields = ('stripe_id',)
 
 
 class InvoiceItemSerializer(ModelSerializer):

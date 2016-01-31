@@ -878,14 +878,15 @@ class Charge(StripeObject):
         invoice_id = data.get("invoice", None)
         if obj.customer.invoices.filter(stripe_id=invoice_id).exists():
             obj.invoice = obj.customer.invoices.get(stripe_id=invoice_id)
-        obj.card_last_4 = data["card"]["last4"]
-        obj.card_kind = data["card"]["type"]
+        obj.card_last_4 = data.source.last4
+        obj.card_kind = data.source.brand
         obj.currency = data["currency"]
         obj.amount = convert_amount_for_db(data["amount"], obj.currency)
         obj.paid = data["paid"]
         obj.refunded = data["refunded"]
         obj.captured = data["captured"]
-        obj.fee = convert_amount_for_db(data["fee"])  # assume in usd only
+        # Assume fee in usd only
+        obj.fee = convert_amount_for_db(data["application_fee"] or 0)
         obj.disputed = data["dispute"] is not None
         obj.charge_created = convert_tstamp(data, "created")
         if data.get("description"):
