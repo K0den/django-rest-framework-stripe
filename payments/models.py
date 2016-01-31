@@ -302,6 +302,23 @@ class TransferChargeFee(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
 
 
+def _get_active_card(stripe_customer):
+    # The `active_card` attribute of `Customer` was deprecated in
+    # API version 2013-07-05. As of version 2015-02-18, the
+    # preferred way to get the "active" card is to retrieve the
+    # card listed as the `default_source`.
+    try:
+        active_card = stripe_customer.active_card
+    except AttributeError:
+        if stripe_customer.default_source:
+            active_card = stripe_customer.sources.retrieve(
+                stripe_customer.default_source)
+        else:
+            active_card = None
+
+    return active_card
+
+
 class Customer(StripeObject):
     user = models.OneToOneField(
         getattr(settings, "AUTH_USER_MODEL", "auth.User"),
@@ -393,13 +410,14 @@ class Customer(StripeObject):
             trial_end=trial_end
         )
 
-        if stripe_customer.active_card:
+        active_card = _get_active_card(stripe_customer)
+        if active_card:
             cus = cls.objects.create(
                 user=user,
                 stripe_id=stripe_customer.id,
-                card_fingerprint=stripe_customer.active_card.fingerprint,
-                card_last_4=stripe_customer.active_card.last4,
-                card_kind=stripe_customer.active_card.type
+                card_fingerprint=active_card.fingerprint,
+                card_last_4=active_card.last4,
+                card_kind=active_card.brand
             )
         else:
             cus = cls.objects.create(
@@ -427,10 +445,10 @@ class Customer(StripeObject):
 
     def save_card(self, cu=None):
         cu = cu or self.stripe_customer
-        active_card = cu.active_card
+        active_card = _get_active_card(cu)
         self.card_fingerprint = active_card.fingerprint
         self.card_last_4 = active_card.last4
-        self.card_kind = active_card.type
+        self.card_kind = active_card.brand
         self.save()
         card_changed.send(sender=self, stripe_response=cu)
 
