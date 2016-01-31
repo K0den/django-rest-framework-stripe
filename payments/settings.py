@@ -49,9 +49,10 @@ def plan_from_stripe_id(stripe_id):
 
 
 def get_api_key():
-    if settings.DEBUG:
-        api_key = settings.STRIPE_PUBLIC_KEY
-    else:
-        api_key = settings.STRIPE_SECRET_KEY
-
+    api_key = settings.STRIPE_SECRET_KEY
+    ensure_test = getattr(settings, 'STRIPE_ENSURE_TEST', True)
+    if ensure_test and 'test' not in api_key:
+        raise RuntimeError('Stripe API key is not a test key. Set '
+                           'STRIPE_ENSURE_TEST to False in the settings to '
+                           'allow the use of live keys.')
     return api_key
