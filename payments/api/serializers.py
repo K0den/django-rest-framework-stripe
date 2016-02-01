@@ -41,9 +41,13 @@ class CurrentSubscriptionSerializer(ModelSerializer):
 
 
 class ChargeSerializer(ModelSerializer):
+    send_receipt = serializers.BooleanField(
+        default=app_settings.SEND_EMAIL_RECEIPTS)
+
     class Meta:
         model = Charge
         read_only_fields = ('stripe_id',)
+        write_only_fields = ('send_receipt',)
 
 
 class InvoiceItemSerializer(ModelSerializer):

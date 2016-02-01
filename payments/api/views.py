@@ -162,12 +162,12 @@ class ChargeView(StripeView, generics.ListCreateAPIView):
         self.request.data.update({'customer': customer.pk})
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         charge_data = dict(
             amount=serializer.validated_data.get('amount'),
             currency=serializer.validated_data.get('currency', 'usd'),
             description=serializer.validated_data.get('description'),
-            send_receipt=False
+            send_receipt=serializer.validated_data.get('send_receipt')
         )
         charge = customer.charge(**charge_data)
         new_charge = self.get_serializer(instance=charge)
